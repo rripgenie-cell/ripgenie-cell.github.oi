@@ -1,0 +1,21 @@
+const K="eps_linear_v1";let users=JSON.parse(localStorage.getItem(K)||"{}");const save=()=>localStorage.setItem(K,JSON.stringify(users));const cur=localStorage.getItem('eps_cur');const $=id=>document.getElementById(id);
+if($('login')){$('login').onclick=()=>{let u=$('u').value.trim(),p=$('p').value;if(!users[u]||users[u].pw!==p){$('err').style.display='block';$('err').textContent='Invalid credentials';return}localStorage.setItem('eps_cur',u);location.href='vault.html'}}
+if($('reg')){$('reg').onclick=()=>{let u=$('u').value.trim(),p=$('p').value;if(u.length<3||p.length<3){$('err').style.display='block';$('err').textContent='Min 3 chars';return}if(users[u]){$('err').style.display='block';$('err').textContent='Already taken';return}users[u]={pw:p,files:[],folders:[],trash:[]};save();localStorage.setItem('eps_cur',u);location.href='vault.html'}}
+if($('uname')){
+ if(!cur||!users[cur]) location.href='index.html';
+ $('uname').textContent=cur; let mode='all',curF='root';
+ const total=()=>users[cur].files.reduce((a,b)=>a+b.size,0);
+ $('quota').textContent=(total()/1024/1024).toFixed(1)+' MB / 500 MB';
+ const rf=()=>{let c=$('folders');c.innerHTML='';users[cur].folders.forEach(f=>{let b=document.createElement('button');b.className='side';if(curF===f.id)b.classList.add('active');b.textContent='📁 '+f.name;b.onclick=()=>{curF=f.id;mode='all';render()};c.appendChild(b)})};
+ $('newF').onclick=()=>{let n=prompt('Folder name');if(!n)return;users[cur].folders.push({id:Date.now()+'',name:n});save();rf()};
+ document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('.side').forEach(x=>x.classList.remove('active'));b.classList.add('active');render()});
+ const drop=$('drop'),file=$('file');drop.onclick=()=>file.click();drop.ondragover=e=>{e.preventDefault();drop.style.borderColor='#5E6AD2'};drop.ondrop=e=>{e.preventDefault();handle(e.dataTransfer.files)};file.onchange=()=>handle(file.files);
+ function handle(fs){if(total()+[...fs].reduce((a,b)=>a+b.size,0)>500*1024*1024){alert('Quota exceeded');return}for(let f of fs){let r=new FileReader();r.onload=ev=>{users[cur].files.unshift({id:Date.now()+Math.random(),name:f.name,size:f.size,data:ev.target.result,date:new Date().toLocaleDateString(),folder:curF,fav:false});save();render()};r.readAsDataURL(f)}};
+ window.toTrash=id=>{let i=users[cur].files.findIndex(x=>x.id==id);let [x]=users[cur].files.splice(i,1);users[cur].trash.unshift(x);save();render()};
+ window.restore=id=>{let i=users[cur].trash.findIndex(x=>x.id==id);let [x]=users[cur].trash.splice(i,1);users[cur].files.unshift(x);save();render()};
+ window.del=id=>{users[cur].trash=users[cur].trash.filter(x=>x.id!=id);save();render()};
+ window.dl=id=>{let f=[...users[cur].files,...users[cur].trash].find(x=>x.id==id);let a=document.createElement('a');a.href=f.data;a.download=f.name;a.click()};
+ window.fav=id=>{let f=users[cur].files.find(x=>x.id==id);f.fav=!f.fav;save();render()};
+ function render(){let q=($('search').value||'').toLowerCase();let list=$('list');let files=mode==='trash'?users[cur].trash:users[cur].files;if(mode==='fav')files=files.filter(x=>x.fav);if(mode==='all'&&curF!=='root')files=files.filter(x=>x.folder===curF);if(q)files=files.filter(x=>x.name.toLowerCase().includes(q));list.innerHTML='';if(!files.length){list.innerHTML='<div class="item" style="opacity:0.4">No files</div>';return}files.forEach(f=>{let d=document.createElement('div');d.className='item';d.innerHTML=`<div><b>${f.fav?'★ ':''}${f.name}</b><br><small>${(f.size/1024).toFixed(0)} KB • ${f.date}</small></div><div class="acts">${mode!=='trash'?`<button onclick="fav('${f.id}')">★</button><button onclick="dl('${f.id}')">DL</button><button onclick="toTrash('${f.id}')">Trash</button>`:`<button onclick="restore('${f.id}')">Restore</button><button onclick="del('${f.id}')">Delete</button>`}</div>`;list.appendChild(d)});$('quota').textContent=(total()/1024/1024).toFixed(1)+' MB / 500 MB';}
+ $('search').oninput=render;$('logout').onclick=()=>{localStorage.removeItem('eps_cur');location.href='index.html'};rf();render();
+}

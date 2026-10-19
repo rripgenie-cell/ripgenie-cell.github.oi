@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>EPS VAULT</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{background:#0E0E10;color:#fff;font-family:'Inter',sans-serif}
+.shell{display:grid;grid-template-columns:440px 1fr;min-height:100vh}.left{background:#101012;border-right:1px solid #1E1E20;padding:48px;display:flex;flex-direction:column;justify-content:center}
+.mark{width:40px;height:40px;background:#1C1C1F;border:1px solid #2A2A2E;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:20px}
+.right{display:flex;align-items:center;justify-content:center;padding:24px}.card{width:100%;max-width:400px;background:#171719;border:1px solid #232326;border-radius:16px;padding:32px}
+.muted{color:#8A8F98;font-size:13px;margin:8px 0 24px;display:block}.err{display:none;margin-top:12px;background:#FF4D4D14;border:1px solid #FF4D4D22;color:#FF6B6B;font-size:12px;padding:10px;border-radius:8px}
+label{font-size:10px;letter-spacing:1px;color:#8A8F98;margin:18px 0 8px;display:block;font-weight:700}
+input{background:#101012;border:1px solid #232326;border-radius:10px;padding:13px 14px;width:100%;color:#fff;font-size:14px;outline:none}
+.btn{width:100%;background:#5E6AD2;color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:14px;margin-top:20px;cursor:pointer}.btn.sec{background:#1C1C1F;border:1px solid #2A2A2E}
+.btn-big{background:#5E6AD2;color:#fff;border:none;border-radius:12px;padding:14px 20px;font-weight:700;font-size:14px;cursor:pointer;display:flex;gap:8px;margin-top:12px}
+.bottom{margin-top:18px;text-align:center;font-size:13px;color:#8A8F98}.bottom a{color:#fff;text-decoration:none;border-bottom:1px solid #333;margin-left:6px}
+.top{height:60px;border-bottom:1px solid #1E1E20;background:#101012;display:flex;align-items:center;padding:0 20px}
+.layout{display:grid;grid-template-columns:240px 1fr;max-width:1300px;margin:0 auto}aside{border-right:1px solid #1E1E20;padding:16px 10px;min-height:calc(100vh - 60px);display:flex;flex-direction:column;gap:6px}
+.side{width:100%;text-align:left;background:none;border:none;padding:11px 12px;border-radius:10px;font-size:13px;color:#8A8F98;cursor:pointer;display:flex;gap:8px}.side.active{background:#1C1C1F;color:#fff;border:1px solid #2A2A2E}.side.primary{background:#5E6AD2;color:#fff;font-weight:700}
+.sep{height:1px;background:#1E1E20;margin:10px 0}main{padding:28px}.toolbar{display:flex;gap:12px;margin-bottom:18px}.search-wrap{flex:1;position:relative}.search-wrap input{width:100%;background:#171719;border:1px solid #232326;border-radius:10px;padding:12px 14px 12px 36px;color:#fff}.search-wrap span{position:absolute;left:12px;top:50%;transform:translateY(-50%)}
+.drop{background:#171719;border:1px dashed #2A2A2E;border-radius:12px;padding:22px;display:flex;justify-content:center;cursor:pointer;color:#8A8F98}
+.files{display:grid;gap:8px;margin-top:18px}.item{background:#171719;border:1px solid #232326;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;place-items:center;z-index:50}.modal.on{display:grid}.box{background:#171719;border:1px solid #232326;border-radius:16px;padding:28px;width:90%;max-width:420px}
+.code{font-size:28px;font-weight:800;letter-spacing:4px;text-align:center;background:#101012;border:2px solid #5E6AD2;border-radius:12px;padding:16px;margin:16px 0;color:#8B8EFF}
+.link{font-size:11px;background:#101012;border:1px solid #2A2A2E;border-radius:8px;padding:10px;word-break:break-all;color:#8A8F98}
+.empty{border:1px dashed #2A2A2E;background:#111113;border-radius:16px;padding:40px 20px;text-align:center;color:#6A6F78}
+.bottom-menu{margin-top:auto;padding-top:12px;border-top:1px solid #1E1E20;display:flex;flex-direction:column;gap:6px}
+</style></head><body>
+<div id="auth"></div><div id="app" style="display:none"></div>
+<div id="shareModal" class="modal"><div class="box"><h3>✅ Partagé !</h3><p id="shareFileName" style="font-size:12px;color:#8A8F98;margin-top:6px"></p><div id="shareCode" class="code"></div><div id="shareLink" class="link" style="margin-top:12px"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px"><button id="copyCode" class="btn sec">Copier CODE</button><button id="copyLink" class="btn">Copier LIEN</button></div><button id="closeShare" class="side" style="justify-content:center;margin-top:10px">Fermer</button></div></div>
+<div id="receiveModal" class="modal"><div class="box"><h2>🔑 J'ai un code</h2><input id="inCode" placeholder="Ex: X7K9P2Q4" style="margin-top:14px;text-transform:uppercase;text-align:center;font-size:20px;letter-spacing:4px;font-weight:800"><div id="receiveErr" class="err"></div><button id="doReceive" class="btn">📥 Télécharger →</button><button id="closeReceive" class="side" style="justify-content:center;margin-top:8px">Annuler</button></div></div>
+<script>
+const K="eps_vault_users", KS="eps_vault_shared"; 
+let users=JSON.parse(localStorage.getItem(K)||"{}"); 
+let shared=JSON.parse(localStorage.getItem(KS)||"{}");
+const save=()=>localStorage.setItem(K,JSON.stringify(users)); 
+const saveS=()=>localStorage.setItem(KS,JSON.stringify(shared));
+let cur=localStorage.getItem('eps_cur'); 
+let view='files';
+function gen(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const arr=new Uint32Array(8);
+  crypto.getRandomValues(arr);
+  let code="";
+  for(let i=0;i<8;i++) code+=chars[arr[i]%chars.length];
+  return code;
+}
+function showAuth(mode='login'){
+ document.getElementById('app').style.display='none'; let a=document.getElementById('auth'); a.style.display='block';
+ a.innerHTML=`<div class="shell"><div class="left"><div class="mark">E</div><h1 style="margin-top:20px;font-size:32px;font-weight:800">EPS<br>VAULT</h1><p style="color:#8A8F98;margin-top:16px;font-size:14px;line-height:1.6">Ton coffre privé, sécurisé.</p><div style="margin-top:32px;background:#171719;border:1px solid #232326;border-radius:12px;padding:16px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Tu as reçu un code ?</div><button id="btnRA" class="btn-big">🔑 J'ai un code de partage</button></div></div><div class="right"><div class="card"><div class="mark" style="margin-bottom:16px">E</div><h2>${mode==='login'?'Connexion':'Créer un compte'}</h2><span class="muted">${mode==='login'?'Accède à ton coffre':'Crée ton coffre privé'}</span><label>NOM</label><input id="u" placeholder="ex: marc"><label>MOT DE PASSE</label><input id="p" type="password"><div id="err" class="err"></div><button id="go" class="btn">${mode==='login'?'Se connecter →':'Créer mon coffre →'}</button><div class="bottom"><span>${mode==='login'?'Pas de compte ?':'Déjà un compte ?'}</span><a href="#" id="sw">${mode==='login'?'Créer un compte':'Se connecter'}</a></div></div></div></div>`;
+ document.getElementById('sw').onclick=e=>{e.preventDefault();showAuth(mode==='login'?'register':'login')};
+ document.getElementById('btnRA').onclick=()=>document.getElementById('receiveModal').classList.add('on');
+ document.getElementById('go').onclick=()=>{
+  let u=document.getElementById('u').value.trim(),p=document.getElementById('p').value,err=document.getElementById('err');
+  if(u.length<3||p.length<3){err.style.display='block';err.textContent='3 caractères mini';return}
+  if(mode==='login'){if(!users[u]||users[u].pw!==p){err.style.display='block';err.textContent='Mauvais identifiants';return}localStorage.setItem('eps_cur',u);location.reload()}
+  else{if(users[u]){err.style.display='block';err.textContent='Nom pris';return}users[u]={pw:p,files:[],trash:[]};save();localStorage.setItem('eps_cur',u);location.reload()}
+ };
+}
+function showApp(){
+ document.getElementById('auth').style.display='none'; let d=document.getElementById('app'); d.style.display='block'; let u=users[cur]; if(!u.trash) u.trash=[];
+ d.innerHTML=`<div class="top"><div style="display:flex;align-items:center;gap:10px"><div class="mark" style="width:28px;height:28px;font-size:14px">E</div><b>${cur} - EPS VAULT</b></div></div>
+ <div class="layout"><aside>
+  <button id="vFiles" class="side active">📁 Fichiers (${u.files.length})</button>
+  <button id="vTrash" class="side">🗑️ Corbeille (${u.trash.length})</button>
+  <div class="sep"></div>
+  <div style="font-size:10px;color:#555;padding:4px 12px">PARTAGE</div>
+  <button id="btnMenuReceive" class="side primary">🔑 J'ai un code</button>
+  <button id="btnMenuShares" class="side">🔗 Mes partages (${Object.keys(shared).length})</button>
+  <div class="bottom-menu"><button id="emptyTrash" class="side" style="color:#FF6B6B;display:${u.trash.length?'flex':'none'}">🧹 Vider corbeille</button><button id="logout" class="side">🚪 Déconnexion</button></div>
+ </aside><main><div class="toolbar"><div class="search-wrap"><span>🔍</span><input id="search" placeholder="Rechercher un fichier..."></div></div><div id="drop" class="drop">📁 Déposez fichiers ici ou cliquez</div><input type="file" id="file" multiple hidden><div id="list" class="files"></div></main></div>`;
+ let file=document.getElementById('file'),drop=document.getElementById('drop');drop.onclick=()=>file.click();drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();handle(e.dataTransfer.files)};file.onchange=()=>handle(file.files);
+ function handle(fs){for(let f of fs){let r=new FileReader();r.onload=ev=>{users[cur].files.unshift({id:Date.now()+Math.random(),name:f.name,size:f.size,data:ev.target.result});save();render()};r.readAsDataURL(f)}};
+ window.share=id=>{
+  let f=[...users[cur].files,...users[cur].trash].find(x=>x.id==id);
+  let c=gen(); while(shared[c]) c=gen();
+  shared[c]={name:f.name,size:f.size,data:f.data,created:Date.now()};
+  saveS();
+  document.getElementById('shareFileName').textContent=f.name;
+  document.getElementById('shareCode').textContent=c;
+  document.getElementById('shareLink').textContent=location.origin+location.pathname+'?share='+c;
+  document.getElementById('shareModal').classList.add('on');
+  render();
+ };
+ window.del=id=>{let i=users[cur].files.findIndex(x=>x.id==id);if(i>-1){let f=users[cur].files[i];f.deletedAt=Date.now();users[cur].trash.unshift(f);users[cur].files.splice(i,1);save();render()}};
+ window.restore=id=>{let i=users[cur].trash.findIndex(x=>x.id==id);if(i>-1){users[cur].files.unshift(users[cur].trash[i]);users[cur].trash.splice(i,1);save();render()}};
+ window.permDel=id=>{if(!confirm('Supprimer définitivement ?'))return;users[cur].trash=users[cur].trash.filter(x=>x.id!=id);save();render()};
+ window.dl=id=>{let f=[...users[cur].files,...users[cur].trash].find(x=>x.id==id);if(!f){let s=shared[id];if(s){let a=document.createElement('a');a.href=s.data;a.download=s.name;a.click();return}} let a=document.createElement('a');a.href=f.data;a.download=f.name;a.click()};
+ function render(){
+  let q=(document.getElementById('search')?.value||'').toLowerCase();let list=document.getElementById('list');
+  if(view==='files'){let fs=u.files.filter(x=>!q||x.name.toLowerCase().includes(q));list.innerHTML=fs.length?fs.map(f=>`<div class="item"><div><b>${f.name}</b><br><small>${(f.size/1024).toFixed(0)} KB</small></div><div style="display:flex;gap:6px"><button onclick="share('${f.id}')" class="side" style="width:auto;background:#5E6AD214;color:#8B8EFF">Partager</button><button onclick="dl('${f.id}')" class="side" style="width:auto">DL</button><button onclick="del('${f.id}')" class="side" style="width:auto;color:#FF6B6B">🗑️</button></div></div>`).join(''):'<div class="empty">📁 Aucun fichier</div>'}
+  else if(view==='trash'){let fs=u.trash.filter(x=>!q||x.name.toLowerCase().includes(q));list.innerHTML=fs.length?fs.map(f=>`<div class="item"><div><b>${f.name}</b></div><div style="display:flex;gap:6px"><button onclick="restore('${f.id}')" class="side" style="width:auto;color:#5E6AD2">↩️ Restaurer</button><button onclick="permDel('${f.id}')" class="side" style="width:auto;color:#FF6B6B">Suppr.</button></div></div>`).join(''):'<div class="empty">🗑️ Corbeille vide</div>'}
+  else if(view==='shares'){let codes=Object.entries(shared);list.innerHTML=codes.length?codes.map(([c,f])=>`<div class="item"><div><b style="color:#8B8EFF;letter-spacing:2px">${c}</b> - ${f.name}</div><div style="display:flex;gap:6px"><button onclick="dl('${c}')" class="side" style="width:auto">DL</button><button onclick="revoke('${c}')" class="side" style="width:auto;color:#FF6B6B">Révoquer</button></div></div>`).join(''):'<div class="empty">🔗 Aucun partage</div>'}
+  document.getElementById('vFiles').innerHTML=`📁 Fichiers (${u.files.length})`;document.getElementById('vTrash').innerHTML=`🗑️ Corbeille (${u.trash.length})`;document.getElementById('btnMenuShares').innerHTML=`🔗 Mes partages (${Object.keys(shared).length})`;
+ }
+ window.revoke=c=>{delete shared[c];saveS();render()};
+ document.getElementById('vFiles').onclick=()=>{view='files';setActive('vFiles');document.getElementById('drop').style.display='flex';render()};
+ document.getElementById('vTrash').onclick=()=>{view='trash';setActive('vTrash');document.getElementById('drop').style.display='none';render()};
+ document.getElementById('btnMenuShares').onclick=()=>{view='shares';setActive('btnMenuShares');document.getElementById('drop').style.display='none';render()};
+ function setActive(id){['vFiles','vTrash','btnMenuShares'].forEach(x=>document.getElementById(x).classList.remove('active'));document.getElementById(id).classList.add('active');}
+ document.getElementById('btnMenuReceive').onclick=()=>document.getElementById('receiveModal').classList.add('on');
+ document.getElementById('emptyTrash').onclick=()=>{users[cur].trash=[];save();render()};
+ document.getElementById('logout').onclick=()=>{localStorage.removeItem('eps_cur');location.reload()};
+ document.getElementById('search').oninput=render; render();
+}
+document.getElementById('closeShare').onclick=()=>document.getElementById('shareModal').classList.remove('on');document.getElementById('closeReceive').onclick=()=>document.getElementById('receiveModal').classList.remove('on');
+document.getElementById('copyCode').onclick=()=>{navigator.clipboard.writeText(document.getElementById('shareCode').textContent);alert('CODE: '+document.getElementById('shareCode').textContent)};document.getElementById('copyLink').onclick=()=>{navigator.clipboard.writeText(document.getElementById('shareLink').textContent);alert('LIEN copié')};
+document.getElementById('doReceive').onclick=()=>{let c=document.getElementById('inCode').value.trim().toUpperCase(),err=document.getElementById('receiveErr');let f=shared[c];if(!f){err.style.display='block';err.textContent='Code invalide';return}err.style.display='none';document.getElementById('receiveModal').classList.remove('on');let a=document.createElement('a');a.href=f.data;a.download=f.name;a.click()};
+if(!cur||!users[cur]) showAuth('login'); else showApp();
+</script></body></html>
